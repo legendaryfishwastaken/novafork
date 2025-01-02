@@ -370,13 +370,11 @@ $(document).ready(async function () {
             handleError('An error occurred while fetching media for the company.', error);
         }
     }
-
     // Function to fetch movies in a collection with pagination
     async function fetchMoviesInCollection(collectionId, page = 1) {
         currentMediaType = 'collection';
         currentPage = page;
         const url = `https://api.themoviedb.org/3/collection/${collectionId}?api_key=${API_KEY}&language=en-US`;
-
         try {
             const response = await $.getJSON(url);
             if (!response.parts || response.parts.length === 0) {
@@ -386,28 +384,21 @@ $(document).ready(async function () {
                 updatePaginationControls(currentPage, totalPages);
                 return;
             }
-
             const sortedMovies = response.parts.sort((a, b) => new Date(a.release_date) - new Date(b.release_date));
-
             totalPages = Math.ceil(sortedMovies.length / 12);
-
             const paginatedMovies = sortedMovies.slice((currentPage - 1) * 12, currentPage * 12);
-
             displayPopularMedia(paginatedMovies);
-
             updatePaginationControls(currentPage, totalPages);
         } catch (error) {
             handleError('An error occurred while fetching movies in the collection.', error);
         }
     }
-
     // Function to fetch movies and shows by actor with pagination
     async function fetchMoviesAndShowsByActor(actorId, page = 1) {
         currentMediaType = 'actor';
         currentPage = page;
         const selectedType = $typeSelect.val();
         const url = `https://api.themoviedb.org/3/discover/${selectedType}?api_key=${API_KEY}&with_cast=${actorId}&language=en-US&page=${page}`;
-
         try {
             const response = await $.getJSON(url);
             if (response.total_results === 0) {
@@ -417,7 +408,6 @@ $(document).ready(async function () {
                 updatePaginationControls(currentPage, totalPages);
                 return;
             }
-
             const results = response.results.slice(0, 12);
             totalPages = response.total_pages;
             displayPopularMedia(results);
@@ -607,27 +597,25 @@ $(document).ready(async function () {
             timeout = setTimeout(() => func.apply(this, args), delay);
         };
     }
-
     async function fetchSelectedMedia(mediaId, mediaType) {
         try {
             const response = await $.getJSON(`https://api.themoviedb.org/3/${mediaType}/${mediaId}?api_key=${API_KEY}`);
             if (response) {
                 const media = response;
-
+    
                 const releaseType = await getReleaseType(mediaId, mediaType);
-
-                const titleSlug = media.title ? media.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : media.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                const newUrl = `${window.location.origin}${window.location.pathname}?title=${encodeURIComponent(titleSlug)}`;
+    
+                const newUrl = `${window.location.origin}${window.location.pathname}?mediaType=${encodeURIComponent(mediaType)}&mediaId=${encodeURIComponent(mediaId)}`;
                 window.history.pushState({ mediaId, mediaType, title: media.title || media.name }, '', newUrl);
-
+    
                 displaySelectedMedia(media, mediaType, releaseType);
                 await fetchMediaTrailer(mediaId, mediaType);
-
+    
                 if ($posterImage.length && media.poster_path) {
                     $posterImage.attr('src', `https://image.tmdb.org/t/p/w300${media.poster_path}`);
                     $posterImage.attr('alt', media.title || media.name);
                 }
-
+    
                 $videoPlayerContainer.removeClass('hidden');
             } else {
                 handleError('Failed to fetch media details.', new Error('API response not OK'));
@@ -638,6 +626,7 @@ $(document).ready(async function () {
             $videoPlayerContainer.addClass('hidden');
         }
     }
+    
 
     const cache = new Map();
 
@@ -761,6 +750,9 @@ $(document).ready(async function () {
 
 
     let displayedMediaIds = new Set();
+
+
+
     async function displayPopularMedia(results) {
         $popularMedia.empty();
         displayedMediaIds.clear();
@@ -816,28 +808,32 @@ $(document).ready(async function () {
             // Get certification information if available
             const certification = (mediaType === 'movie' && media.certifications['US']) ? media.certifications['US'] : '';
 
-            // Populate the media card's HTML content
             $mediaCard.html(`
-            <img src="https://image.tmdb.org/t/p/w500${media.poster_path}" alt="${media.title || media.name}" class="media-image">
-            ${displayType ? `<div class="release-type">${displayType}</div>` : ''}
-            <div class="media-content">
-                <h3 class="media-title">${media.title || media.name}</h3>
-                <p class="media-type">
-                    ${mediaType === 'movie' ? '<i class="fas fa-film" title="Movie"></i> Movie' :
+           <img 
+                 src="${media.poster_path ? `https://image.tmdb.org/t/p/w500${media.poster_path}` : 'placeholder.jpeg'}" 
+                    alt="${media.title || media.name}" 
+                     class="media-image"
+                     onerror="this.onerror=null; this.src='placeholder.jpeg';"
+                 
+             ${displayType ? `<div class="release-type">${displayType}</div>` : ''}
+    <div class="media-content">
+        <h3 class="media-title">${media.title || media.name}</h3>
+        <p class="media-type">
+            ${mediaType === 'movie' ? '<i class="fas fa-film" title="Movie"></i> Movie' :
                 mediaType === 'tv' ? '<i class="fas fa-tv" title="TV Show"></i> TV Show' :
                     '<i class="fas fa-pencil-alt" title="Animation"></i> Animation'}
-                </p>
-                <div class="media-details">
-                    <p><i class="fas fa-theater-masks"></i> Genres: ${genreNames}</p>
-                    <div class="media-rating">
-                        <span class="rating-stars">${ratingStars}</span>
-                        <span>${media.vote_average.toFixed(1)}/10</span>
-                    </div>
-                    <p><i class="fas fa-calendar-alt"></i> Release Date: ${formattedDate}</p>
-                    ${certification ? `<p><i class="fas fa-certificate"></i> Certification: ${certification}</p>` : ''}
-                </div>
+        </p>
+        <div class="media-details">
+            <p><i class="fas fa-theater-masks"></i> Genres: ${genreNames}</p>
+            <div class="media-rating">
+                <span class="rating-stars">${ratingStars}</span>
+                <span>${media.vote_average.toFixed(1)}/10</span>
             </div>
-        `);
+            <p><i class="fas fa-calendar-alt"></i> Release Date: ${formattedDate}</p>
+            ${certification ? `<p><i class="fas fa-certificate"></i> Certification: ${certification}</p>` : ''}
+        </div>
+    </div>
+`);
 
             // Add a click event to fetch and display the selected media
             $mediaCard.on('click', function () {
@@ -904,17 +900,27 @@ $(document).ready(async function () {
             $videoPlayerContainer.addClass('hidden');
         }
     }
-
     async function loadMediaFromUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
+        const mediaType = urlParams.get('mediaType');
+        const mediaId = urlParams.get('mediaId');
         const title = urlParams.get('title');
-
-        if (title) {
+    
+        if (mediaType && mediaId) {
+            const mediaPath = `${mediaType}/${mediaId}`;
+            await fetchSelectedMedia(mediaPath);
+        } else if (title) {
             const response = await $.getJSON(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(title)}`);
-            const media = response.results.find(item => (item.title && item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === title) || (item.name && item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === title));
+            const media = response.results.find(item =>
+                (item.title && item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === title) ||
+                (item.name && item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === title)
+            );
             if (media) {
                 const mediaType = media.media_type || (media.title ? 'movie' : 'tv');
-                await fetchSelectedMedia(media.id, mediaType);
+                const mediaPath = `${mediaType}/${media.id}`;
+                await fetchSelectedMedia(mediaPath);
+            } else {
+                handleError('Media not found based on the title parameter.');
             }
         }
     }
